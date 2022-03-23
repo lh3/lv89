@@ -7,10 +7,11 @@ INCLUDES=
 OBJS=		lv89-semi.o lv89-full.o lv89-semi-tb.o edlib.o
 PROG=		ed-test
 LIBS=		-lz -lpthread -lm
+LIBS_WFA2=
 
 ifneq ($(WFA2_ROOT),)
 	CPPFLAGS+=-D_USE_WFA2
-	OBJS+=$(WFA2_ROOT)/lib/libwfa.a
+	LIBS_WFA2=-L$(WFA2_ROOT)/lib -lwfa
 	INCLUDES+=-I$(WFA2_ROOT)
 endif
 
@@ -31,7 +32,7 @@ endif
 all:$(PROG)
 
 $(PROG):$(OBJS) main.o
-		$(CXX) $(CFLAGS) $^ -o $@ $(LIBS)
+		$(CXX) $(CFLAGS) $^ -o $@ $(LIBS_WFA2) $(LIBS)
 
 clean:
 		rm -fr gmon.out *.o a.out $(PROG) *~ *.a *.dSYM

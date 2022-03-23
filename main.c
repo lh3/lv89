@@ -20,22 +20,26 @@ int main(int argc, char *argv[])
 	int32_t n_cigar;
 	uint32_t *cigar = 0;
 
-	while ((c = ketopt(&o, argc, argv, 1, "glwcsw", 0)) >= 0) {
+	while ((c = ketopt(&o, argc, argv, 1, "gewcsw", 0)) >= 0) {
 		if (c == 'g') is_global = 1;
 		else if (c == 's') is_semi = 1;
-		else if (c == 'l') use_edlib = 1;
+		else if (c == 'e') use_edlib = 1;
 		else if (c == 'w') use_wfa = 1;
 		else if (c == 'c') report_cigar = 1;
+		else {
+			fprintf(stderr, "ERROR: unknown option\n");
+			return 1;
+		}
 	}
 	if (argc - o.ind < 2) {
 		fprintf(stderr, "Usage: ed-test [options] <in1.fa> <in2.fa>\n");
 		fprintf(stderr, "Options:\n");
 		fprintf(stderr, "  -g    count gaps at the end of the target\n");
-		fprintf(stderr, "  -s    the semi mode\n");
-		fprintf(stderr, "  -c    report CIGAR (only working with -s)\n");
-		fprintf(stderr, "  -l    use edlib instead\n");
+		fprintf(stderr, "  -s    stop when reaching the end of either query or target\n");
+		fprintf(stderr, "  -c    report CIGAR (only working with -s; not supporting -e or -w)\n");
+		fprintf(stderr, "  -e    use edlib (incompatible with -s or -w)\n");
 #ifdef _USE_WFA2
-		fprintf(stderr, "  -w    use WFA2\n");
+		fprintf(stderr, "  -w    use WFA2 (implying -g; incompatible with -s or -e)\n");
 #endif
 		return 1;
 	}
@@ -51,11 +55,13 @@ int main(int argc, char *argv[])
 
 	if (use_edlib) {
 		EdlibAlignResult rst;
+		fprintf(stderr, "Using edlib...\n");
 		rst = edlibAlign(ks2->seq.s, ks2->seq.l, ks1->seq.s, ks1->seq.l,
 				edlibNewAlignConfig(-1, is_global? EDLIB_MODE_NW : EDLIB_MODE_SHW, EDLIB_TASK_DISTANCE, NULL, 0));
 		s = rst.editDistance;
-#ifdef _USE_WFA
+#ifdef _USE_WFA2
 	} else if (use_wfa) {
+		fprintf(stderr, "Using WFA2-lib...\n");
 		wavefront_aligner_attr_t attributes = wavefront_aligner_attr_default;
 		attributes.distance_metric = edit;
 		attributes.alignment_scope = compute_score;
@@ -65,6 +71,7 @@ int main(int argc, char *argv[])
 		wavefront_aligner_delete(wf_aligner);
 #endif
 	} else {
+		fprintf(stderr, "Using lv89...\n");
 		if (report_cigar) {
 			if (is_semi)
 				cigar = lv_ed_semi_cigar(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, &s, &n_cigar);

@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include "lv89.h"
 #include "edlib.h"
-#ifdef _USE_WFA
-#include "gap_affine/affine_wavefront_align.h"
+#ifdef _USE_WFA2
+#include "wavefront/wavefront_align.h"
 #endif
 #include "ketopt.h"
 #include "kseq.h"
@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
 	int32_t n_cigar;
 	uint32_t *cigar = 0;
 
-	while ((c = ketopt(&o, argc, argv, 1, "glwcs", 0)) >= 0) {
+	while ((c = ketopt(&o, argc, argv, 1, "glwcsw", 0)) >= 0) {
 		if (c == 'g') is_global = 1;
 		else if (c == 's') is_semi = 1;
 		else if (c == 'l') use_edlib = 1;
@@ -34,8 +34,8 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "  -s    the semi mode\n");
 		fprintf(stderr, "  -c    report CIGAR (only working with -s)\n");
 		fprintf(stderr, "  -l    use edlib instead\n");
-#ifdef _USE_WFA
-		fprintf(stderr, "  -w    use WFA\n");
+#ifdef _USE_WFA2
+		fprintf(stderr, "  -w    use WFA2\n");
 #endif
 		return 1;
 	}
@@ -56,12 +56,13 @@ int main(int argc, char *argv[])
 		s = rst.editDistance;
 #ifdef _USE_WFA
 	} else if (use_wfa) {
-		mm_allocator_t* const mm_allocator = mm_allocator_new(BUFFER_SIZE_8M);
-		affine_penalties_t pan = { .match = 0, .mismatch = 1, .gap_opening = 1, .gap_extension = 1 }; // Init Affine-WFA
-		affine_wavefronts_t *wf =
-			affine_wavefronts_new_complete(ks2->seq.l, ks1->seq.l, &pan, NULL, mm_allocator);
-		affine_wavefronts_align(wf, ks2->seq.s, ks2->seq.l, ks1->seq.s, ks1->seq.l);
-		s = edit_cigar_score_gap_affine(&wf->edit_cigar, &pan);
+		wavefront_aligner_attr_t attributes = wavefront_aligner_attr_default;
+		attributes.distance_metric = edit;
+		attributes.alignment_scope = compute_score;
+		wavefront_aligner_t* const wf_aligner = wavefront_aligner_new(&attributes);
+		wavefront_align(wf_aligner, ks2->seq.s, ks2->seq.l, ks1->seq.s, ks1->seq.l);
+		s = wf_aligner->align_status.score;
+		wavefront_aligner_delete(wf_aligner);
 #endif
 	} else {
 		if (report_cigar) {

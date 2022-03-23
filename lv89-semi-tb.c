@@ -150,8 +150,8 @@ static uint32_t *wf_traceback(int32_t t_end, const char *ts, int32_t q_end, cons
 		}
 		--s;
 	}
-	if (i > 0) wf_cigar_push(&cigar, 1, i);
-	else if (k > 0) wf_cigar_push(&cigar, 2, k);
+	if (i >= 0) wf_cigar_push(&cigar, 1, i + 1);
+	else if (k >= 0) wf_cigar_push(&cigar, 2, k + 1);
 	for (i = 0; i < cigar.n>>1; ++i) {
 		uint32_t t = cigar.cigar[i];
 		cigar.cigar[i] = cigar.cigar[cigar.n - i - 1];

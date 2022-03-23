@@ -7,6 +7,8 @@ cd lv89
 make
 
 # Compile with WFA2
+git clone https://github.com/lh3/lv89
+cd lv89
 git clone https://github.com/smarco/WFA2-lib
 (cd WFA2-lib && make)
 make WFA2_ROOT=WFA2-lib

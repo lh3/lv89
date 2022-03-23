@@ -65,6 +65,7 @@ int main(int argc, char *argv[])
 		wavefront_aligner_attr_t attributes = wavefront_aligner_attr_default;
 		attributes.distance_metric = edit;
 		attributes.alignment_scope = compute_score;
+		attributes.heuristic.strategy = wf_heuristic_none;
 		wavefront_aligner_t* const wf_aligner = wavefront_aligner_new(&attributes);
 		wavefront_align(wf_aligner, ks2->seq.s, ks2->seq.l, ks1->seq.s, ks1->seq.l);
 		s = wf_aligner->align_status.score;

@@ -32,7 +32,7 @@ typedef struct {
 	int32_t d, k;
 } wf_diag_t;
 
-static int32_t wf_step(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t n, wf_diag_t *a)
+static int32_t wf_step(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t n, wf_diag_t *a, int32_t *t_end, int32_t *q_end)
 {
 	int32_t j;
 	wf_diag_t *b = a + n + 2; // temporary array
@@ -66,7 +66,10 @@ static int32_t wf_step(int32_t tl, const char *ts, int32_t ql, const char *qs, i
 		else if (k + 7 >= max_k)
 			while (k < max_k && *(ts_ + k) == *(qs_ + k)) // use this for generic CPUs. It is slightly faster than the unoptimized version
 				++k;
-		if (k + p->d == ql - 1 || k == tl - 1) return -1;
+		if (k + p->d == ql - 1 || k == tl - 1) {
+			*t_end = k, *q_end = k + p->d;
+			return -1;
+		}
 		p->k = k;
 	}
 #endif
@@ -93,15 +96,16 @@ static int32_t wf_step(int32_t tl, const char *ts, int32_t ql, const char *qs, i
 }
 
 // mem should be at least (tl+ql)*16 long
-int32_t lv_ed_semi(int32_t tl, const char *ts, int32_t ql, const char *qs, uint8_t *mem)
+int32_t lv_ed_semi(int32_t tl, const char *ts, int32_t ql, const char *qs, uint8_t *mem, int32_t *t_end, int32_t *q_end)
 {
 	int32_t s = 0, n = 1;
 	wf_diag_t *a = (wf_diag_t*)mem;
 	a[0].d = 0, a[0].k = -1;
 	while (1) {
-		n = wf_step(tl, ts, ql, qs, n, a);
+		n = wf_step(tl, ts, ql, qs, n, a, t_end, q_end);
 		if (n < 0) break;
 		++s;
 	}
+	++*t_end, ++*q_end;
 	return s;
 }

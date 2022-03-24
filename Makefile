@@ -4,7 +4,7 @@ CFLAGS=		-g -Wall -O2
 CXXFLAGS=	$(CFLAGS)
 CPPFLAGS=
 INCLUDES=
-OBJS=		lv89-semi.o lv89-full.o lv89-semi-tb.o edlib.o
+OBJS=		lv89-semi.o lv89-full.o lv89-semi-tb.o lv89-full-tb.o edlib.o
 PROG=		ed-test
 LIBS=		-lz -lpthread -lm
 LIBS_WFA2=
@@ -43,6 +43,7 @@ depend:
 # DO NOT DELETE
 
 example.o: lv89.h
+lv89-full-tb.o: lv89.h
 lv89-full.o: lv89.h
 lv89-semi-tb.o: lv89.h
 lv89-semi.o: lv89.h

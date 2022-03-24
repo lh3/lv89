@@ -74,9 +74,11 @@ int main(int argc, char *argv[])
 	} else {
 		fprintf(stderr, "Using lv89...\n");
 		if (report_cigar) {
-			if (is_semi)
+			if (is_semi) {
 				cigar = lv_ed_semi_cigar(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, &s, &n_cigar);
-			else {
+			} else if (is_global) {
+				cigar = lv_ed_full_cigar(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, &s, &n_cigar);
+			} else {
 				fprintf(stderr, "ERROR: not implemented\n");
 				abort();
 			}
@@ -93,11 +95,14 @@ int main(int argc, char *argv[])
 	if (!report_cigar) {
 		printf("%s\t%s\t%d\n", ks1->name.s, ks2->name.s, s);
 	} else {
-		int32_t i;
+		int32_t i, ed = 0;
 		printf("%s\t%s\t%d\t", ks1->name.s, ks2->name.s, s);
-		for (i = 0; i < n_cigar; ++i)
-			printf("%d%c", cigar[i]>>4, "MID"[cigar[i]&0xf]);
+		for (i = 0; i < n_cigar; ++i) {
+			printf("%d%c", cigar[i]>>4, "MIDNSHP=XB"[cigar[i]&0xf]);
+			if ((cigar[i]&0xf) != 7) ed += cigar[i]>>4;
+		}
 		putchar('\n');
+		assert(ed == s);
 	}
 	free(cigar);
 

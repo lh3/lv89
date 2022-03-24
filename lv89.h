@@ -11,24 +11,23 @@ extern "C" {
  * Find the edit distance between two sequences
  *
  * @param tl         target sequence length
- * @param ts         targeet sequence
+ * @param ts         target sequence
  * @param ql         query sequence length
  * @param qs         query sequence
- * @param is_global  false to ignore gaps at the end of the target
+ * @param is_ext     extension alignment if true (stop when reaching the end of either query or target)
+ * @param score      (out) edit distance
+ * @param t_endl     (out) length of target in the alignment
+ * @param q_endl     (out) length of query in the alignment
+ * @param n_cigar    (out) number of cigar operations
  * @param mem        temporary memory of lv_ed_bufsize(tl, ql) bytes
  *
- * @return edit distance
+ * @return CIGAR in the htslib packing
  */
+uint32_t *lv_ed_unified(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t is_ext, int32_t *score, int32_t *t_endl, int32_t *q_endl, int32_t *n_cigar);
+
 int32_t lv_ed(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t is_global, uint8_t *mem);
-
 int32_t lv_ed_semi(int32_t tl, const char *ts, int32_t ql, const char *qs, uint8_t *mem, int32_t *t_end, int32_t *q_end);
-
-uint32_t *lv_ed_semi_cigar(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t *score, int32_t *n_cigar);
-uint32_t *lv_ed_full_cigar(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t *score, int32_t *n_cigar);
-
 int32_t lv_ed_bufsize(int32_t tl, int32_t ql);
-
-uint32_t *lv89(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t *score, int32_t is_ext, int32_t *t_endl, int32_t *q_endl, int32_t *n_cigar);
 
 #ifdef __cplusplus
 }

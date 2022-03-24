@@ -76,9 +76,9 @@ int main(int argc, char *argv[])
 	} else {
 		fprintf(stderr, "Using lv89...\n");
 		if (report_cigar) {
-			cigar = lv89(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, &s, is_ext, &t_endl, &q_endl, &n_cigar);
+			cigar = lv_ed_unified(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, is_ext, &s, &t_endl, &q_endl, &n_cigar);
 		} else if (use_unify) {
-			lv89(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, &s, is_ext, &t_endl, &q_endl, 0);
+			lv_ed_unified(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, is_ext, &s, &t_endl, &q_endl, 0);
 		} else {
 			uint8_t *mem = (uint8_t*)malloc(lv_ed_bufsize(ks1->seq.l, ks2->seq.l));
 			if (is_ext)

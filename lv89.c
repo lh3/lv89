@@ -163,7 +163,7 @@ static uint32_t *wf_traceback(int32_t t_end, const char *ts, int32_t q_end, cons
 	return cigar.cigar;
 }
 
-uint32_t *lv89(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t *score, int32_t is_ext, int32_t *t_endl, int32_t *q_endl, int32_t *n_cigar)
+uint32_t *lv_ed_unified(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t is_ext, int32_t *score, int32_t *t_endl, int32_t *q_endl, int32_t *n_cigar)
 {
 	int32_t s = 0, n = 1, t_end = -1, q_end = -1, i;
 	wf_diag_t *a;

@@ -28,6 +28,8 @@ uint32_t *lv_ed_full_cigar(int32_t tl, const char *ts, int32_t ql, const char *q
 
 int32_t lv_ed_bufsize(int32_t tl, int32_t ql);
 
+uint32_t *lv89(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t *score, int32_t is_ext, int32_t *t_endl, int32_t *q_endl, int32_t *n_cigar);
+
 #ifdef __cplusplus
 }
 #endif

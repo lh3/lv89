@@ -16,13 +16,12 @@ int main(int argc, char *argv[])
 	gzFile fp1, fp2;
 	kseq_t *ks1, *ks2;
 	ketopt_t o = KETOPT_INIT;
-	int c, s, is_global = 0, use_edlib = 0, use_wfa = 0, report_cigar = 0, is_semi = 0;
+	int c, s, is_ext = 0, use_edlib = 0, use_wfa = 0, report_cigar = 0;
 	int32_t n_cigar;
 	uint32_t *cigar = 0;
 
-	while ((c = ketopt(&o, argc, argv, 1, "gewcsw", 0)) >= 0) {
-		if (c == 'g') is_global = 1;
-		else if (c == 's') is_semi = 1;
+	while ((c = ketopt(&o, argc, argv, 1, "ewcx", 0)) >= 0) {
+		if (c == 'x') is_ext = 1;
 		else if (c == 'e') use_edlib = 1;
 		else if (c == 'w') use_wfa = 1;
 		else if (c == 'c') report_cigar = 1;
@@ -34,12 +33,11 @@ int main(int argc, char *argv[])
 	if (argc - o.ind < 2) {
 		fprintf(stderr, "Usage: ed-test [options] <in1.fa> <in2.fa>\n");
 		fprintf(stderr, "Options:\n");
-		fprintf(stderr, "  -g    count gaps at the end of the target\n");
-		fprintf(stderr, "  -s    stop when reaching the end of either query or target\n");
-		fprintf(stderr, "  -c    report CIGAR (only working with -s; not supporting -e or -w)\n");
-		fprintf(stderr, "  -e    use edlib (incompatible with -s or -w)\n");
+		fprintf(stderr, "  -x    extension mode\n");
+		fprintf(stderr, "  -c    report CIGAR (not supporting -e or -w)\n");
+		fprintf(stderr, "  -e    use edlib\n");
 #ifdef _USE_WFA2
-		fprintf(stderr, "  -w    use WFA2 (implying -g; incompatible with -s or -e)\n");
+		fprintf(stderr, "  -w    use WFA2\n");
 #endif
 		return 1;
 	}
@@ -57,7 +55,7 @@ int main(int argc, char *argv[])
 		EdlibAlignResult rst;
 		fprintf(stderr, "Using edlib...\n");
 		rst = edlibAlign(ks2->seq.s, ks2->seq.l, ks1->seq.s, ks1->seq.l,
-				edlibNewAlignConfig(-1, is_global? EDLIB_MODE_NW : EDLIB_MODE_SHW, EDLIB_TASK_DISTANCE, NULL, 0));
+				edlibNewAlignConfig(-1, is_ext? EDLIB_MODE_SHW : EDLIB_MODE_NW, EDLIB_TASK_DISTANCE, NULL, 0));
 		s = rst.editDistance;
 #ifdef _USE_WFA2
 	} else if (use_wfa) {
@@ -74,20 +72,14 @@ int main(int argc, char *argv[])
 	} else {
 		fprintf(stderr, "Using lv89...\n");
 		if (report_cigar) {
-			if (is_semi) {
-				cigar = lv_ed_semi_cigar(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, &s, &n_cigar);
-			} else if (is_global) {
-				cigar = lv_ed_full_cigar(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, &s, &n_cigar);
-			} else {
-				fprintf(stderr, "ERROR: not implemented\n");
-				abort();
-			}
+			int32_t t_endl, q_endl;
+			cigar = lv89(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, &s, is_ext, &t_endl, &q_endl, &n_cigar);
 		} else {
 			uint8_t *mem = (uint8_t*)malloc(lv_ed_bufsize(ks1->seq.l, ks2->seq.l));
-			if (is_semi)
+			if (is_ext)
 				s = lv_ed_semi(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, mem);
 			else
-				s = lv_ed(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, is_global, mem);
+				s = lv_ed(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, !is_ext, mem);
 			free(mem);
 		}
 	}

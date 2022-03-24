@@ -97,7 +97,6 @@ int main(int argc, char *argv[])
 			printf("%d%c", cigar[i]>>4, "MIDNSHP=XB"[cigar[i]&0xf]);
 			if ((cigar[i]&0xf) != 7) ed += cigar[i]>>4;
 		}
-		putchar('\n');
 		assert(ed == s);
 		free(cigar);
 	}

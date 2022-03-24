@@ -7,7 +7,7 @@
 
 typedef struct {
 	int32_t d;
-	int32_t k:30, p:2;
+	int32_t k, p;
 } wf_diag_t;
 
 typedef struct {
@@ -76,13 +76,22 @@ static int32_t wf_step(wf_tb_t *tb, int32_t is_ext, int32_t tl, const char *ts, 
 	b[1].d = a[0].d;
 	b[1].p =  n == 1 || a[0].k > a[1].k? 0 : 1;
 	b[1].k = (n == 1 || a[0].k > a[1].k? a[0].k : a[1].k) + 1;
-	for (j = 1; j < n - 1; ++j) {
-		int32_t k = a[j-1].k, p = -1;
-		p = k > a[j+1].k + 1? p : 1;
-		k = k > a[j+1].k + 1? k : a[j+1].k + 1;
-		p = k > a[j].k + 1? p : 0;
-		k = k > a[j].k + 1? k : a[j].k + 1;
-		b[j+1].d = a[j].d, b[j+1].k = k, b[j+1].p = p;
+	if (tb) {
+		for (j = 1; j < n - 1; ++j) {
+			int32_t k = a[j-1].k, p = -1;
+			p = k > a[j+1].k + 1? p : 1;
+			k = k > a[j+1].k + 1? k : a[j+1].k + 1;
+			p = k > a[j].k + 1? p : 0;
+			k = k > a[j].k + 1? k : a[j].k + 1;
+			b[j+1].d = a[j].d, b[j+1].k = k, b[j+1].p = p;
+		}
+	} else {
+		for (j = 1; j < n - 1; ++j) {
+			int32_t k = a[j-1].k;
+			k = k > a[j+1].k + 1? k : a[j+1].k + 1;
+			k = k > a[j].k + 1? k : a[j].k + 1;
+			b[j+1].d = a[j].d, b[j+1].k = k;
+		}
 	}
 	if (n >= 2) {
 		b[n].d = a[n-1].d;

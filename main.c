@@ -35,11 +35,11 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Usage: ed-test [options] <in1.fa> <in2.fa>\n");
 		fprintf(stderr, "Options:\n");
 		fprintf(stderr, "  -x    extension mode\n");
-		fprintf(stderr, "  -c    report CIGAR (not supporting -e or -w)\n");
+		fprintf(stderr, "  -c    report CIGAR (implying -u; not supporting -e or -w)\n");
 		fprintf(stderr, "  -u    use the unified lv89 implementation (slower)\n");
-		fprintf(stderr, "  -e    use edlib\n");
+		fprintf(stderr, "  -e    use edlib (not supporting -c and -x)\n");
 #ifdef _USE_WFA2
-		fprintf(stderr, "  -w    use WFA2\n");
+		fprintf(stderr, "  -w    use WFA2 (not supporting -c and -x)\n");
 #endif
 		return 1;
 	}

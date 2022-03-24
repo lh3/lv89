@@ -38,7 +38,7 @@ static int32_t wf_step(wf_tb_t *tb, int32_t is_ext, int32_t tl, const char *ts, 
 	wf_diag_t *b = a + n + 2; // temporary array
 
 	// wfa_extend
-	*t_end = -1;
+	*t_end = *q_end = -1;
 	for (j = 0; j < n; ++j) {
 		wf_diag_t *p = &a[j];
 		int32_t k = p->k, max_k;

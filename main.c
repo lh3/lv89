@@ -19,6 +19,7 @@ int main(int argc, char *argv[])
 	int c, s, is_ext = 0, use_edlib = 0, use_wfa = 0, use_unify = 0, report_cigar = 0;
 	int32_t n_cigar, t_endl, q_endl;
 	uint32_t *cigar = 0;
+	char *cigar_str = 0;
 
 	while ((c = ketopt(&o, argc, argv, 1, "ewcxu", 0)) >= 0) {
 		if (c == 'x') is_ext = 1;
@@ -37,7 +38,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "  -x    extension mode\n");
 		fprintf(stderr, "  -c    report CIGAR (implying -u; not supporting -e or -w)\n");
 		fprintf(stderr, "  -u    use the unified lv89 implementation (slower)\n");
-		fprintf(stderr, "  -e    use edlib (not supporting -c and -x)\n");
+		fprintf(stderr, "  -e    use edlib (not supporting -x)\n");
 #ifdef _USE_WFA2
 		fprintf(stderr, "  -w    use WFA2 (not supporting -c and -x)\n");
 #endif
@@ -59,8 +60,11 @@ int main(int argc, char *argv[])
 		EdlibAlignResult rst;
 		fprintf(stderr, "Using edlib...\n");
 		rst = edlibAlign(ks2->seq.s, ks2->seq.l, ks1->seq.s, ks1->seq.l,
-				edlibNewAlignConfig(-1, is_ext? EDLIB_MODE_SHW : EDLIB_MODE_NW, EDLIB_TASK_DISTANCE, NULL, 0));
+				edlibNewAlignConfig(-1, is_ext? EDLIB_MODE_SHW : EDLIB_MODE_NW, report_cigar? EDLIB_TASK_PATH : EDLIB_TASK_DISTANCE, NULL, 0));
 		s = rst.editDistance;
+		if (report_cigar)
+			cigar_str = edlibAlignmentToCigar(rst.alignment, rst.alignmentLength, EDLIB_CIGAR_EXTENDED);
+		edlibFreeAlignResult(rst);
 #ifdef _USE_WFA2
 	} else if (use_wfa) {
 		fprintf(stderr, "Using WFA2-lib...\n");
@@ -93,11 +97,15 @@ int main(int argc, char *argv[])
 	if (report_cigar) {
 		int32_t i, ed = 0;
 		putchar('\t');
-		for (i = 0; i < n_cigar; ++i) {
-			printf("%d%c", cigar[i]>>4, "MIDNSHP=XB"[cigar[i]&0xf]);
-			if ((cigar[i]&0xf) != 7) ed += cigar[i]>>4;
+		if (cigar_str) {
+			fputs(cigar_str, stdout);
+		} else {
+			for (i = 0; i < n_cigar; ++i) {
+				printf("%d%c", cigar[i]>>4, "MIDNSHP=XB"[cigar[i]&0xf]);
+				if ((cigar[i]&0xf) != 7) ed += cigar[i]>>4;
+			}
+			assert(ed == s);
 		}
-		assert(ed == s);
 		free(cigar);
 	}
 	putchar('\n');

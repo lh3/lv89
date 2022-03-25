@@ -21,8 +21,7 @@ This repo provides a reasonably fast yet lightweight implementation of the
 [Landau-Vishkin][lv89]/[Myers86][myers86] algorithm to compute the edit
 distance between two strings, in a formulation inspired by [WFA2][WFA2]. This
 repo doesn't aim at the fastest implementation. It is usually slower than
-[edlib][edlib] and [WFA2][WFA2] but is simpler. It also has a unique low-memory
-mode to generate base alignment, more effective than the current WFA2.
+[edlib][edlib] and [WFA2][WFA2] but is simpler.
 
 ## The algorithm
 
@@ -38,7 +37,8 @@ blocks where each block, except the last one, has edit distance exactly *q*.
 We then perform base alignment inside each block. The new algorithm takes
 *O*(*n*(*d*+*q*)) in time and *O*(*d*\*ceil(*d*/*q*)+*q*<sup>2</sup>) in space.
 When *q* equals 1000, the space can be reduced by tens of folds in practice in
-comparison to the basic algorithm.
+comparison to the basic algorithm. I later realized that this is similar to
+[Eizenga and Paten (2022)][EP22].
 
 ## Brief benchmark
 
@@ -107,3 +107,4 @@ semi-global alignment under affine gap penalties.
 [seq-zenodo]: https://zenodo.org/record/6056061
 [leap]: https://www.biorxiv.org/content/10.1101/133157v3
 [myers-bit]: https://dl.acm.org/doi/10.1145/316542.316550
+[EP22]: https://www.biorxiv.org/content/10.1101/2022.01.12.476087v1

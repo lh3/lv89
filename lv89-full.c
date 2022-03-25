@@ -87,7 +87,7 @@ int32_t lv_ed_bufsize(int32_t tl, int32_t ql)
 }
 
 // mem should be at least (tl+ql)*16 long
-int32_t lv_ed(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t is_global, uint8_t *mem)
+int32_t lv_ed_full(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t is_global, uint8_t *mem)
 {
 	int32_t s = 0, n = 1;
 	wf_diag_t *a;

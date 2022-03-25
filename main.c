@@ -16,19 +16,17 @@ int main(int argc, char *argv[])
 	gzFile fp1, fp2;
 	kseq_t *ks1, *ks2;
 	ketopt_t o = KETOPT_INIT;
-	int c, s, step = 0, is_ext = 0, use_edlib = 0, use_wfa = 0, use_unify = 0, report_cigar = 0, mem_mode = 2;
-	int32_t n_cigar, t_endl, q_endl, n_seg;
+	int c, s, step = 0, is_ext = 0, use_edlib = 0, use_wfa = 0, report_cigar = 0, mem_mode = 2;
+	int32_t n_cigar, t_endl, q_endl;
 	uint32_t *cigar = 0;
-	uint64_t *seg = 0;
 	char *cigar_str = 0;
 
-	while ((c = ketopt(&o, argc, argv, 1, "ewcxus:m:", 0)) >= 0) {
+	while ((c = ketopt(&o, argc, argv, 1, "ewcxs:m:", 0)) >= 0) {
 		if (c == 'x') is_ext = 1;
 		else if (c == 's') step = atoi(o.arg);
 		else if (c == 'e') use_edlib = 1;
 		else if (c == 'w') use_wfa = 1;
 		else if (c == 'c') report_cigar = 1;
-		else if (c == 'u') use_unify = 1;
 		else if (c == 'm') mem_mode = atoi(o.arg);
 		else {
 			fprintf(stderr, "ERROR: unknown option\n");
@@ -40,7 +38,6 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Options:\n");
 		fprintf(stderr, "  -x      extension mode\n");
 		fprintf(stderr, "  -c      report CIGAR (implying -u; not supporting -e or -w)\n");
-		fprintf(stderr, "  -u      use the unified lv89 implementation (slower)\n");
 		fprintf(stderr, "  -e      use edlib (not supporting -x)\n");
 #ifdef _USE_WFA2
 		fprintf(stderr, "  -w      use WFA2 (not supporting -x)\n");
@@ -84,24 +81,7 @@ int main(int argc, char *argv[])
 #endif
 	} else {
 		fprintf(stderr, "Using lv89...\n");
-		if (report_cigar) {
-			if (step > 0)
-				cigar = lv_ed_unified_seg(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, is_ext, step, &s, &t_endl, &q_endl, &n_cigar);
-			else
-				cigar = lv_ed_unified(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, is_ext, &s, &t_endl, &q_endl, &n_cigar);
-		} else if (step > 0) {
-			seg = lv_ed_segment(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, is_ext, step, &s, &n_seg);
-			t_endl = seg[n_seg-1]>>32, q_endl = (int32_t)seg[n_seg-1];
-		} else if (use_unify) {
-			lv_ed_unified(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, is_ext, &s, &t_endl, &q_endl, 0);
-		} else {
-			uint8_t *mem = (uint8_t*)malloc(lv_ed_bufsize(ks1->seq.l, ks2->seq.l));
-			if (is_ext)
-				s = lv_ed_semi(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, mem, &t_endl, &q_endl);
-			else
-				s = lv_ed(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, 1, mem);
-			free(mem);
-		}
+		cigar = lv_ed(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, is_ext, step, &s, &t_endl, &q_endl, report_cigar? &n_cigar : 0);
 	}
 
 	printf("%s\t%ld\t0\t%d\t+\t%s\t%ld\t0\t%d\t%d", ks1->name.s, ks1->seq.l, t_endl, ks2->name.s, ks2->seq.l, q_endl, s);
@@ -118,12 +98,6 @@ int main(int argc, char *argv[])
 			assert(ed == s);
 		}
 		free(cigar);
-	} else if (step > 0) {
-		int32_t i;
-		putchar('\t');
-		for (i = 0; i < n_seg; ++i) printf("%d,", (int32_t)(seg[i]>>32));
-		putchar('\t');
-		for (i = 0; i < n_seg; ++i) printf("%d,", (int32_t)seg[i]);
 	}
 	putchar('\n');
 

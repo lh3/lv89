@@ -9,8 +9,7 @@
  * Diagonal and a couple of common routines
  */
 typedef struct {
-	int32_t d;
-	int32_t k, p;
+	int32_t d, k, p; // diagonal (query pos minus target pos), target pos, traceback variable
 } wf_diag_t;
 
 // Extend a diagonal along exact matches. This is a bottleneck and could be made faster with padding.
@@ -37,6 +36,7 @@ static inline int32_t wf_extend1(int32_t tl, const char *ts, int32_t ql, const c
 	return k;
 }
 
+// filter diagonals with a fixed bandwidth
 static inline void wf_prune_bw(int32_t tl, int32_t ql, int32_t is_ext, int32_t bw, int32_t *st, int32_t *en, const wf_diag_t *b)
 {
 	int32_t min_d, max_d, s = *st, e = *en;
@@ -53,17 +53,18 @@ static inline void wf_prune_bw(int32_t tl, int32_t ql, int32_t is_ext, int32_t b
 	*st = s, *en = e;
 }
 
+// filter out diagonals that are unlikely to reach a better alignment than the current best. Only applicable to global alignment. This is not an approximation.
 static inline void wf_prune_global(int32_t tl, int32_t ql, int32_t *st, int32_t *en, const wf_diag_t *b)
 {
 	int32_t k, min = INT32_MAX, s = *st, e = *en;
 	for (k = s; k < e; ++k) {
 		int32_t i = b[k].k + b[k].d;
 		int32_t x = ql - i > tl - b[k].k? ql - i : tl - b[k].k;
-		min = min < x? min : x;
+		min = min < x? min : x; // min is the max possible distance
 	}
 	for (k = s; k < e; ++k) {
 		int32_t i = b[k].k + b[k].d;
-		int32_t x = (ql - i) - (tl - b[k].k);
+		int32_t x = (ql - i) - (tl - b[k].k); // x is the least possible distance from b[k]
 		x = x >= 0? x : -x;
 		if (x < min) break;
 	}
@@ -170,7 +171,7 @@ static int32_t wf_step_basic(wf_tb_t *tb, int32_t s, int32_t is_ext, int32_t bw,
 	b[1].d = a[0].d;
 	b[1].p =  n == 1 || a[0].k > a[1].k? 0 : 1;
 	b[1].k = (n == 1 || a[0].k > a[1].k? a[0].k : a[1].k) + 1;
-	if (tb) {
+	if (tb) { // with traceback
 		for (j = 1; j < n - 1; ++j) {
 			int32_t k = a[j-1].k, p = -1;
 			p = k > a[j].k + 1? p : 0;
@@ -179,7 +180,7 @@ static int32_t wf_step_basic(wf_tb_t *tb, int32_t s, int32_t is_ext, int32_t bw,
 			k = k > a[j+1].k + 1? k : a[j+1].k + 1;
 			b[j+1].d = a[j].d, b[j+1].k = k, b[j+1].p = p;
 		}
-	} else {
+	} else { // simpler without traceback
 		for (j = 1; j < n - 1; ++j) {
 			int32_t k = a[j-1].k;
 			k = k > a[j].k + 1? k : a[j].k + 1;
@@ -200,8 +201,9 @@ static int32_t wf_step_basic(wf_tb_t *tb, int32_t s, int32_t is_ext, int32_t bw,
 		if (b[0].d < -tl) ++st;
 		if (b[n+1].d > ql) --en;
 	} else wf_prune_bw(tl, ql, is_ext, bw, &st, &en, b);
-	if (!is_ext && ((s+1)&0x1f) == 0) wf_prune_global(tl, ql, &st, &en, b);
-	if (tb) {
+	if (!is_ext && ((s+1)&0x1f) == 0 && en - st > 2) // only apply global filter every 32 steps
+		wf_prune_global(tl, ql, &st, &en, b);
+	if (tb) { // keep traceback information
 		wf_tb1_t *q;
 		wf_tb_add(tb, n + 2);
 		q = &tb->a[tb->n - 1];
@@ -355,7 +357,8 @@ static int32_t wf_step_seg(int32_t s, int32_t is_ext, int32_t bw, int32_t tl, co
 		if (b[0].d < -tl) ++st;
 		if (b[n+1].d > ql) --en;
 	} else wf_prune_bw(tl, ql, is_ext, bw, &st, &en, b);
-	if (!is_ext && ((s+1)&0x1f) == 0) wf_prune_global(tl, ql, &st, &en, b);
+	if (!is_ext && ((s+1)&0x1f) == 0 && en - st > 2)
+		wf_prune_global(tl, ql, &st, &en, b);
 	memcpy(a, &b[st], (en - st) * sizeof(*a));
 	return en - st;
 }
@@ -423,7 +426,7 @@ uint32_t *lv_ed(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t 
 	for (i = 0; i < n_seg - 1; ++i) {
 		int32_t t_st = seg[i]>>32, t_en = seg[i+1]>>32;
 		int32_t q_st = (int32_t)seg[i], q_en = (int32_t)seg[i+1], s;
-		if (t_st == t_en) {
+		if (t_st == t_en) { // lv_basic() doesn't work when ql or tl is zero
 			wf_cigar_push1(&ci, 1, q_en - q_st);
 			s = q_en - q_st;
 		} else if (q_st == q_en) {

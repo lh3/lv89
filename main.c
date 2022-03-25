@@ -16,8 +16,7 @@ int main(int argc, char *argv[])
 	gzFile fp1, fp2;
 	kseq_t *ks1, *ks2;
 	ketopt_t o = KETOPT_INIT;
-	int c, s, step = 0, is_ext = 0, use_edlib = 0, use_wfa = 0, report_cigar = 0, mem_mode = 2, bw = 0;
-	int32_t n_cigar, t_endl, q_endl;
+	int c, step = 0, is_ext = 0, use_edlib = 0, use_wfa = 0, report_cigar = 0, mem_mode = 2, bw = 0;
 	uint32_t *cigar = 0;
 	char *cigar_str = 0;
 
@@ -54,54 +53,53 @@ int main(int argc, char *argv[])
 	assert(fp1 && fp2);
 	ks1 = kseq_init(fp1);
 	ks2 = kseq_init(fp2);
-	kseq_read(ks1);
-	kseq_read(ks2);
 
-	t_endl = ks1->seq.l, q_endl = ks2->seq.l;
-
-	if (use_edlib) {
-		EdlibAlignResult rst;
-		fprintf(stderr, "Using edlib...\n");
-		rst = edlibAlign(ks2->seq.s, ks2->seq.l, ks1->seq.s, ks1->seq.l,
-				edlibNewAlignConfig(-1, is_ext? EDLIB_MODE_SHW : EDLIB_MODE_NW, report_cigar? EDLIB_TASK_PATH : EDLIB_TASK_DISTANCE, NULL, 0));
-		s = rst.editDistance;
-		if (report_cigar)
-			cigar_str = edlibAlignmentToCigar(rst.alignment, rst.alignmentLength, EDLIB_CIGAR_EXTENDED);
-		edlibFreeAlignResult(rst);
+	while (kseq_read(ks1) >= 0 && kseq_read(ks2) >= 0) {
+		int32_t t_endl = ks1->seq.l, q_endl = ks2->seq.l, s, n_cigar;
+		if (use_edlib) {
+			EdlibAlignResult rst;
+			fprintf(stderr, "Using edlib...\n");
+			rst = edlibAlign(ks2->seq.s, ks2->seq.l, ks1->seq.s, ks1->seq.l,
+					edlibNewAlignConfig(-1, is_ext? EDLIB_MODE_SHW : EDLIB_MODE_NW, report_cigar? EDLIB_TASK_PATH : EDLIB_TASK_DISTANCE, NULL, 0));
+			s = rst.editDistance;
+			if (report_cigar)
+				cigar_str = edlibAlignmentToCigar(rst.alignment, rst.alignmentLength, EDLIB_CIGAR_EXTENDED);
+			edlibFreeAlignResult(rst);
 #ifdef _USE_WFA2
-	} else if (use_wfa) {
-		fprintf(stderr, "Using WFA2-lib...\n");
-		wavefront_aligner_attr_t attributes = wavefront_aligner_attr_default;
-		attributes.distance_metric = edit;
-		attributes.alignment_scope = report_cigar? compute_alignment : compute_score;
-		attributes.memory_mode = mem_mode <= 1? wavefront_memory_low : mem_mode == 2? wavefront_memory_med : wavefront_memory_high;
-		attributes.heuristic.strategy = wf_heuristic_none;
-		wavefront_aligner_t* const wf_aligner = wavefront_aligner_new(&attributes);
-		wavefront_align(wf_aligner, ks2->seq.s, ks2->seq.l, ks1->seq.s, ks1->seq.l);
-		s = wf_aligner->align_status.score;
-		wavefront_aligner_delete(wf_aligner);
+		} else if (use_wfa) { // FIXME: in the WFA2 mode, CIGAR is not printed
+			fprintf(stderr, "Using WFA2-lib...\n");
+			wavefront_aligner_attr_t attributes = wavefront_aligner_attr_default;
+			attributes.distance_metric = edit;
+			attributes.alignment_scope = report_cigar? compute_alignment : compute_score;
+			attributes.memory_mode = mem_mode <= 1? wavefront_memory_low : mem_mode == 2? wavefront_memory_med : wavefront_memory_high;
+			attributes.heuristic.strategy = wf_heuristic_none;
+			wavefront_aligner_t* const wf_aligner = wavefront_aligner_new(&attributes);
+			wavefront_align(wf_aligner, ks2->seq.s, ks2->seq.l, ks1->seq.s, ks1->seq.l);
+			s = wf_aligner->align_status.score;
+			wavefront_aligner_delete(wf_aligner);
 #endif
-	} else {
-		fprintf(stderr, "Using lv89...\n");
-		cigar = lv_ed(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, is_ext, bw, step, &s, &t_endl, &q_endl, report_cigar? &n_cigar : 0);
-	}
-
-	printf("%s\t%ld\t0\t%d\t+\t%s\t%ld\t0\t%d\t%d", ks1->name.s, ks1->seq.l, t_endl, ks2->name.s, ks2->seq.l, q_endl, s);
-	if (report_cigar && !use_wfa) {
-		int32_t i, ed = 0;
-		putchar('\t');
-		if (cigar_str) {
-			fputs(cigar_str, stdout);
 		} else {
-			for (i = 0; i < n_cigar; ++i) {
-				printf("%d%c", cigar[i]>>4, "MIDNSHP=XB"[cigar[i]&0xf]);
-				if ((cigar[i]&0xf) != 7) ed += cigar[i]>>4;
-			}
-			assert(ed == s);
+			fprintf(stderr, "Using lv89...\n");
+			cigar = lv_ed(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, is_ext, bw, step, &s, &t_endl, &q_endl, report_cigar? &n_cigar : 0);
 		}
-		free(cigar);
+
+		printf("%s\t%ld\t0\t%d\t+\t%s\t%ld\t0\t%d\t%d", ks1->name.s, ks1->seq.l, t_endl, ks2->name.s, ks2->seq.l, q_endl, s);
+		if (report_cigar && !use_wfa) {
+			int32_t i, ed = 0;
+			putchar('\t');
+			if (cigar_str) {
+				fputs(cigar_str, stdout);
+			} else {
+				for (i = 0; i < n_cigar; ++i) {
+					printf("%d%c", cigar[i]>>4, "MIDNSHP=XB"[cigar[i]&0xf]);
+					if ((cigar[i]&0xf) != 7) ed += cigar[i]>>4;
+				}
+				assert(ed == s);
+			}
+			free(cigar);
+		}
+		putchar('\n');
 	}
-	putchar('\n');
 
 	kseq_destroy(ks1);
 	kseq_destroy(ks2);

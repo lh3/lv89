@@ -20,7 +20,7 @@ extern "C" {
  * @param score      (out) edit distance
  * @param t_endl     (out) length of target in the alignment
  * @param q_endl     (out) length of query in the alignment
- * @param n_cigar    (out) number of cigar operations; NULL if don't need CIGAR
+ * @param n_cigar    (in/out) number of cigar operations; NULL if don't need CIGAR
  *
  * @return CIGAR in the htslib packing
  */

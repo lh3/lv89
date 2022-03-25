@@ -37,7 +37,7 @@ static inline int32_t wf_extend1(int32_t tl, const char *ts, int32_t ql, const c
 	return k;
 }
 
-static inline void wf_prune(int32_t tl, int32_t ql, int32_t is_ext, int32_t bw, int32_t *st, int32_t *en, const wf_diag_t *b)
+static inline void wf_prune_bw(int32_t tl, int32_t ql, int32_t is_ext, int32_t bw, int32_t *st, int32_t *en, const wf_diag_t *b)
 {
 	int32_t min_d, max_d, s = *st, e = *en;
 	if (is_ext) {
@@ -50,6 +50,31 @@ static inline void wf_prune(int32_t tl, int32_t ql, int32_t is_ext, int32_t bw, 
 	max_d = max_d >  ql? max_d :  ql;
 	while (b[s].d < min_d) ++s;
 	while (b[e - 1].d > max_d) --e;
+	*st = s, *en = e;
+}
+
+static inline void wf_prune_global(int32_t tl, int32_t ql, int32_t *st, int32_t *en, const wf_diag_t *b)
+{
+	int32_t k, min = INT32_MAX, s = *st, e = *en;
+	for (k = s; k < e; ++k) {
+		int32_t i = b[k].k + b[k].d;
+		int32_t x = ql - i > tl - b[k].k? ql - i : tl - b[k].k;
+		min = min < x? min : x;
+	}
+	for (k = s; k < e; ++k) {
+		int32_t i = b[k].k + b[k].d;
+		int32_t x = (ql - i) - (tl - b[k].k);
+		x = x >= 0? x : -x;
+		if (x < min) break;
+	}
+	s = k;
+	for (k = e - 1; k >= s; --k) {
+		int32_t i = b[k].k + b[k].d;
+		int32_t x = (ql - i) - (tl - b[k].k);
+		x = x >= 0? x : -x;
+		if (x < min) break;
+	}
+	e = k + 1;
 	*st = s, *en = e;
 }
 
@@ -117,7 +142,7 @@ static void wf_cigar_push(wf_cigar_t *c, int32_t n_cigar, const uint32_t *cigar)
 /*
  * Basic LV89
  */
-static int32_t wf_step_basic(wf_tb_t *tb, int32_t is_ext, int32_t bw, int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t n, wf_diag_t *a, int32_t *t_end, int32_t *q_end)
+static int32_t wf_step_basic(wf_tb_t *tb, int32_t s, int32_t is_ext, int32_t bw, int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t n, wf_diag_t *a, int32_t *t_end, int32_t *q_end)
 {
 	int32_t j, st = 0, en = n + 2;
 	wf_diag_t *b = a + n + 2; // temporary array
@@ -174,7 +199,8 @@ static int32_t wf_step_basic(wf_tb_t *tb, int32_t is_ext, int32_t bw, int32_t tl
 	if (bw <= 0 || n < bw + bw + 1) {
 		if (b[0].d < -tl) ++st;
 		if (b[n+1].d > ql) --en;
-	} else wf_prune(tl, ql, is_ext, bw, &st, &en, b);
+	} else wf_prune_bw(tl, ql, is_ext, bw, &st, &en, b);
+	if (!is_ext && ((s+1)&0x1f) == 0) wf_prune_global(tl, ql, &st, &en, b);
 	if (tb) {
 		wf_tb1_t *q;
 		wf_tb_add(tb, n + 2);
@@ -237,7 +263,7 @@ uint32_t *lv_ed_basic(int32_t tl, const char *ts, int32_t ql, const char *qs, in
 	a = (wf_diag_t*)malloc(2 * (tl + ql + 2) * sizeof(*a)); // without CIGAR, this would be all the memory needed
 	a[0].d = 0, a[0].k = -1;
 	while (1) {
-		n = wf_step_basic(n_cigar? &tb : 0, is_ext, bw, tl, ts, ql, qs, n, a, &t_end, &q_end);
+		n = wf_step_basic(n_cigar? &tb : 0, s, is_ext, bw, tl, ts, ql, qs, n, a, &t_end, &q_end);
 		if (n < 0) break;
 		++s;
 	}
@@ -280,7 +306,7 @@ static void wf_sb_add(wf_sb_t *tb, int32_t n, const wf_diag_t *a)
 /*
  * Segmentation
  */
-static int32_t wf_step_seg(int32_t is_ext, int32_t bw, int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t n, wf_diag_t *a, int32_t *t_end, int32_t *q_end, int32_t *p_end)
+static int32_t wf_step_seg(int32_t s, int32_t is_ext, int32_t bw, int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t n, wf_diag_t *a, int32_t *t_end, int32_t *q_end, int32_t *p_end)
 {
 	int32_t j, st = 0, en = n + 2;
 	wf_diag_t *b = a + n + 2; // temporary array
@@ -328,12 +354,13 @@ static int32_t wf_step_seg(int32_t is_ext, int32_t bw, int32_t tl, const char *t
 	if (bw <= 0 || n < bw + bw + 1) {
 		if (b[0].d < -tl) ++st;
 		if (b[n+1].d > ql) --en;
-	} else wf_prune(tl, ql, is_ext, bw, &st, &en, b);
+	} else wf_prune_bw(tl, ql, is_ext, bw, &st, &en, b);
+	if (!is_ext && ((s+1)&0x1f) == 0) wf_prune_global(tl, ql, &st, &en, b);
 	memcpy(a, &b[st], (en - st) * sizeof(*a));
 	return en - st;
 }
 
-static uint64_t *wf_segment(wf_sb_t *tb, int32_t t_end, int32_t q_end, int32_t p_end, int32_t *n_slice)
+static uint64_t *wf_traceback_seg(wf_sb_t *tb, int32_t t_end, int32_t q_end, int32_t p_end, int32_t *n_slice)
 {
 	uint64_t *slice;
 	int32_t i, k = 0, p = p_end;
@@ -366,7 +393,7 @@ uint64_t *lv_ed_segment(int32_t tl, const char *ts, int32_t ql, const char *qs, 
 	a = (wf_diag_t*)malloc(2 * (tl + ql + 2) * sizeof(*a)); // without CIGAR, this would be all the memory needed
 	a[0].d = 0, a[0].k = -1, a[0].p = -1;
 	while (1) {
-		n = wf_step_seg(is_ext, bw, tl, ts, ql, qs, n, a, &t_end, &q_end, &p_end);
+		n = wf_step_seg(s, is_ext, bw, tl, ts, ql, qs, n, a, &t_end, &q_end, &p_end);
 		if (n < 0) break;
 		++s;
 		if (s % step == 0) {
@@ -375,7 +402,7 @@ uint64_t *lv_ed_segment(int32_t tl, const char *ts, int32_t ql, const char *qs, 
 		}
 	}
 	free(a);
-	slice = wf_segment(&tb, t_end, q_end, p_end, n_slice);
+	slice = wf_traceback_seg(&tb, t_end, q_end, p_end, n_slice);
 	for (i = 0; i < tb.n; ++i) free(tb.a[i].a);
 	free(tb.a);
 	*score = s;

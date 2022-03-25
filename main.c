@@ -16,13 +16,15 @@ int main(int argc, char *argv[])
 	gzFile fp1, fp2;
 	kseq_t *ks1, *ks2;
 	ketopt_t o = KETOPT_INIT;
-	int c, s, is_ext = 0, use_edlib = 0, use_wfa = 0, use_unify = 0, report_cigar = 0, mem_mode = 2;
-	int32_t n_cigar, t_endl, q_endl;
+	int c, s, step = 0, is_ext = 0, use_edlib = 0, use_wfa = 0, use_unify = 0, report_cigar = 0, mem_mode = 2;
+	int32_t n_cigar, t_endl, q_endl, n_seg;
 	uint32_t *cigar = 0;
+	uint64_t *seg = 0;
 	char *cigar_str = 0;
 
-	while ((c = ketopt(&o, argc, argv, 1, "ewcxum:", 0)) >= 0) {
+	while ((c = ketopt(&o, argc, argv, 1, "ewcxus:m:", 0)) >= 0) {
 		if (c == 'x') is_ext = 1;
+		else if (c == 's') step = atoi(o.arg);
 		else if (c == 'e') use_edlib = 1;
 		else if (c == 'w') use_wfa = 1;
 		else if (c == 'c') report_cigar = 1;
@@ -84,6 +86,9 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Using lv89...\n");
 		if (report_cigar) {
 			cigar = lv_ed_unified(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, is_ext, &s, &t_endl, &q_endl, &n_cigar);
+		} else if (step > 0) {
+			seg = lv_ed_segment(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, is_ext, step, &s, &n_seg);
+			t_endl = seg[n_seg-1]>>32, q_endl = (int32_t)seg[n_seg-1];
 		} else if (use_unify) {
 			lv_ed_unified(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, is_ext, &s, &t_endl, &q_endl, 0);
 		} else {
@@ -97,7 +102,7 @@ int main(int argc, char *argv[])
 	}
 
 	printf("%s\t%ld\t0\t%d\t+\t%s\t%ld\t0\t%d\t%d", ks1->name.s, ks1->seq.l, t_endl, ks2->name.s, ks2->seq.l, q_endl, s);
-	if (report_cigar) {
+	if (report_cigar && !use_wfa) {
 		int32_t i, ed = 0;
 		putchar('\t');
 		if (cigar_str) {
@@ -110,6 +115,12 @@ int main(int argc, char *argv[])
 			assert(ed == s);
 		}
 		free(cigar);
+	} else if (step > 0) {
+		int32_t i;
+		putchar('\t');
+		for (i = 0; i < n_seg; ++i) printf("%d,", (int32_t)(seg[i]>>32));
+		putchar('\t');
+		for (i = 0; i < n_seg; ++i) printf("%d,", (int32_t)seg[i]);
 	}
 	putchar('\n');
 

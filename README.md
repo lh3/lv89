@@ -95,8 +95,8 @@ much longer. To the best of my knowledge, [Xin et al][leap] first found this
 algorithm but apparently they have never published the result in a
 peer-reviewed journal. [WFA][WFA2] is the first published algorithm. It also
 comes with a highly efficient implementation, beating all global alignment
-algorithms by a large margin. WFA is the best overall library for affine gap
-penalties.
+algorithms by a large margin. WFA is the best overall library for global and
+semi-global alignment under affine gap penalties.
 
 [myers86]: https://link.springer.com/article/10.1007/BF01840446
 [lv89]: https://doi.org/10.1016/0196-6774(89)90010-2

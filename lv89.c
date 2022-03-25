@@ -6,7 +6,7 @@
 #include "lv89.h"
 
 /*
- * Diagonal
+ * Diagonal and a couple of common routines
  */
 typedef struct {
 	int32_t d;
@@ -35,6 +35,22 @@ static inline int32_t wf_extend1(int32_t tl, const char *ts, int32_t ql, const c
 		while (k < max_k && *(ts_ + k) == *(qs_ + k)) // use this for generic CPUs. It is slightly faster than the unoptimized version
 			++k;
 	return k;
+}
+
+static inline void wf_prune(int32_t tl, int32_t ql, int32_t is_ext, int32_t bw, int32_t *st, int32_t *en, const wf_diag_t *b)
+{
+	int32_t min_d, max_d, s = *st, e = *en;
+	if (is_ext) {
+		min_d = -bw, max_d = bw;
+	} else {
+		min_d = ql < tl? ql - tl - bw : tl - ql - bw;
+		max_d = tl > ql? tl - ql + bw : ql - tl + bw;
+	}
+	min_d = min_d > -tl? min_d : -tl;
+	max_d = max_d >  ql? max_d :  ql;
+	while (b[s].d < min_d) ++s;
+	while (b[e - 1].d > max_d) --e;
+	*st = s, *en = e;
 }
 
 /*
@@ -101,7 +117,7 @@ static void wf_cigar_push(wf_cigar_t *c, int32_t n_cigar, const uint32_t *cigar)
 /*
  * Basic LV89
  */
-static int32_t wf_step_basic(wf_tb_t *tb, int32_t is_ext, int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t n, wf_diag_t *a, int32_t *t_end, int32_t *q_end)
+static int32_t wf_step_basic(wf_tb_t *tb, int32_t is_ext, int32_t bw, int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t n, wf_diag_t *a, int32_t *t_end, int32_t *q_end)
 {
 	int32_t j, st = 0, en = n + 2;
 	wf_diag_t *b = a + n + 2; // temporary array
@@ -155,8 +171,10 @@ static int32_t wf_step_basic(wf_tb_t *tb, int32_t is_ext, int32_t tl, const char
 	b[n+1].p = -1;
 	b[n+1].k = a[n-1].k;
 
-	if (b[0].d <= -tl) ++st;
-	if (b[n+1].d >= ql) --en;
+	if (bw <= 0 || n < bw + bw + 1) {
+		if (b[0].d < -tl) ++st;
+		if (b[n+1].d > ql) --en;
+	} else wf_prune(tl, ql, is_ext, bw, &st, &en, b);
 	if (tb) {
 		wf_tb1_t *q;
 		wf_tb_add(tb, n + 2);
@@ -209,7 +227,7 @@ static uint32_t *wf_traceback(int32_t t_end, const char *ts, int32_t q_end, cons
 }
 
 // generic method without segmentation
-uint32_t *lv_ed_basic(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t is_ext, int32_t *score, int32_t *t_endl, int32_t *q_endl, int32_t *n_cigar)
+uint32_t *lv_ed_basic(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t is_ext, int32_t bw, int32_t *score, int32_t *t_endl, int32_t *q_endl, int32_t *n_cigar)
 {
 	int32_t s = 0, n = 1, t_end = -1, q_end = -1, i;
 	wf_diag_t *a;
@@ -219,7 +237,7 @@ uint32_t *lv_ed_basic(int32_t tl, const char *ts, int32_t ql, const char *qs, in
 	a = (wf_diag_t*)malloc(2 * (tl + ql + 2) * sizeof(*a)); // without CIGAR, this would be all the memory needed
 	a[0].d = 0, a[0].k = -1;
 	while (1) {
-		n = wf_step_basic(n_cigar? &tb : 0, is_ext, tl, ts, ql, qs, n, a, &t_end, &q_end);
+		n = wf_step_basic(n_cigar? &tb : 0, is_ext, bw, tl, ts, ql, qs, n, a, &t_end, &q_end);
 		if (n < 0) break;
 		++s;
 	}
@@ -262,7 +280,7 @@ static void wf_sb_add(wf_sb_t *tb, int32_t n, const wf_diag_t *a)
 /*
  * Segmentation
  */
-static int32_t wf_step_seg(int32_t is_ext, int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t n, wf_diag_t *a, int32_t *t_end, int32_t *q_end, int32_t *p_end)
+static int32_t wf_step_seg(int32_t is_ext, int32_t bw, int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t n, wf_diag_t *a, int32_t *t_end, int32_t *q_end, int32_t *p_end)
 {
 	int32_t j, st = 0, en = n + 2;
 	wf_diag_t *b = a + n + 2; // temporary array
@@ -307,8 +325,10 @@ static int32_t wf_step_seg(int32_t is_ext, int32_t tl, const char *ts, int32_t q
 	b[n+1].p = a[n-1].p;
 	b[n+1].k = a[n-1].k;
 
-	if (b[0].d <= -tl) ++st;
-	if (b[n+1].d >= ql) --en;
+	if (bw <= 0 || n < bw + bw + 1) {
+		if (b[0].d < -tl) ++st;
+		if (b[n+1].d > ql) --en;
+	} else wf_prune(tl, ql, is_ext, bw, &st, &en, b);
 	memcpy(a, &b[st], (en - st) * sizeof(*a));
 	return en - st;
 }
@@ -336,7 +356,7 @@ static uint64_t *wf_segment(wf_sb_t *tb, int32_t t_end, int32_t q_end, int32_t p
 	return slice;
 }
 
-uint64_t *lv_ed_segment(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t is_ext, int32_t step, int32_t *score, int32_t *n_slice)
+uint64_t *lv_ed_segment(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t is_ext, int32_t bw, int32_t step, int32_t *score, int32_t *n_slice)
 {
 	int32_t s = 0, n = 1, t_end = -1, q_end = -1, p_end = -1, i;
 	wf_diag_t *a;
@@ -346,7 +366,7 @@ uint64_t *lv_ed_segment(int32_t tl, const char *ts, int32_t ql, const char *qs, 
 	a = (wf_diag_t*)malloc(2 * (tl + ql + 2) * sizeof(*a)); // without CIGAR, this would be all the memory needed
 	a[0].d = 0, a[0].k = -1, a[0].p = -1;
 	while (1) {
-		n = wf_step_seg(is_ext, tl, ts, ql, qs, n, a, &t_end, &q_end, &p_end);
+		n = wf_step_seg(is_ext, bw, tl, ts, ql, qs, n, a, &t_end, &q_end, &p_end);
 		if (n < 0) break;
 		++s;
 		if (s % step == 0) {
@@ -365,14 +385,14 @@ uint64_t *lv_ed_segment(int32_t tl, const char *ts, int32_t ql, const char *qs, 
 /*
  * Unified API
  */
-uint32_t *lv_ed(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t is_ext, int32_t step, int32_t *score, int32_t *t_endl, int32_t *q_endl, int32_t *n_cigar)
+uint32_t *lv_ed(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t is_ext, int32_t bw, int32_t step, int32_t *score, int32_t *t_endl, int32_t *q_endl, int32_t *n_cigar)
 {
 	int32_t i, n_seg, sum_s = 0;
 	uint64_t *seg;
 	wf_cigar_t ci = {0,0,0};
 	if (step <= 0 || n_cigar == 0) // if we don't need CIGAR, use the basic algorithm
-		return lv_ed_basic(tl, ts, ql, qs, is_ext, score, t_endl, q_endl, n_cigar);
-	seg = lv_ed_segment(tl, ts, ql, qs, is_ext, step, score, &n_seg);
+		return lv_ed_basic(tl, ts, ql, qs, is_ext, bw, score, t_endl, q_endl, n_cigar);
+	seg = lv_ed_segment(tl, ts, ql, qs, is_ext, bw, step, score, &n_seg);
 	for (i = 0; i < n_seg - 1; ++i) {
 		int32_t t_st = seg[i]>>32, t_en = seg[i+1]>>32;
 		int32_t q_st = (int32_t)seg[i], q_en = (int32_t)seg[i+1], s;
@@ -385,7 +405,7 @@ uint32_t *lv_ed(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t 
 		} else {
 			uint32_t *cigar;
 			int32_t t_endl, q_endl, n_cigar;
-			cigar = lv_ed_basic(t_en - t_st, &ts[t_st], q_en - q_st, &qs[q_st], 0, &s, &t_endl, &q_endl, &n_cigar);
+			cigar = lv_ed_basic(t_en - t_st, &ts[t_st], q_en - q_st, &qs[q_st], 0, bw, &s, &t_endl, &q_endl, &n_cigar);
 			wf_cigar_push(&ci, n_cigar, cigar);
 			free(cigar);
 		}

@@ -79,10 +79,10 @@ His formulation is almost identical to Landau-Vishkin's. Each of the three
 papers also described additional algorithms (for example, Myers (1986) gave a
 linear-space algorithm to find base alignment, inspired by Hirschberg (1975);
 Landau and Vishkin (1989) introduced suffix trees to speed up search).
-Nonetheless, these papers are more often remembered as the first batches of
+Nonetheless, these papers are more often remembered as the first batch of
 papers on the *O*(*nd*) algorithm.
 
-[Edlib][edlib] implements Myers' [bit-parallel algorithm][myers-bit]. The basic
+[Edlib][edlib] implements Myers' [bit-parallel algorithm][myers-bit] published in 1999. The basic
 bit-parallel algorithm is *O*(*mn*/*w*) in time, where *w* is the number of
 bits in an integer. This algorithm is easy to implement. The full algorithm
 has an *O*(*nd*/*w*) expected (not worse-case) time complexity. Implementing
@@ -95,7 +95,8 @@ much longer. To the best of my knowledge, [Xin et al][leap] first found this
 algorithm but apparently they have never published the result in a
 peer-reviewed journal. [WFA][WFA2] is the first published algorithm. It also
 comes with a highly efficient implementation, beating all global alignment
-algorithms by a large margin.
+algorithms by a large margin. WFA is the best overall library for affine gap
+penalties.
 
 [myers86]: https://link.springer.com/article/10.1007/BF01840446
 [lv89]: https://doi.org/10.1016/0196-6774(89)90010-2

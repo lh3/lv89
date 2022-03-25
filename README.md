@@ -37,8 +37,9 @@ blocks where each block, except the last one, has edit distance exactly *q*.
 We then perform base alignment inside each block. The new algorithm takes
 *O*(*n*(*d*+*q*)) in time and *O*(*d*\*ceil(*d*/*q*)+*q*<sup>2</sup>) in space.
 When *q* equals 1000, the space can be reduced by tens of folds in practice in
-comparison to the basic algorithm. I later realized that this is similar to
-[Eizenga and Paten (2022)][EP22].
+comparison to the basic algorithm. I later realized that this is somewhat
+similar to [Eizenga and Paten (2022)][EP22], though the other algorithm does
+not explicitly segment the alignment.
 
 ## Brief benchmark
 

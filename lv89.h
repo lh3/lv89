@@ -25,10 +25,8 @@ extern "C" {
  */
 uint32_t *lv_ed(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t is_ext, int32_t step, int32_t *score, int32_t *t_endl, int32_t *q_endl, int32_t *n_cigar);
 
+uint32_t *lv_ed_basic(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t is_ext, int32_t *score, int32_t *t_endl, int32_t *q_endl, int32_t *n_cigar);
 uint64_t *lv_ed_segment(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t is_ext, int32_t step, int32_t *score, int32_t *n_slice);
-int32_t lv_ed_full(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t is_global, uint8_t *mem);
-int32_t lv_ed_semi(int32_t tl, const char *ts, int32_t ql, const char *qs, uint8_t *mem, int32_t *t_end, int32_t *q_end);
-int32_t lv_ed_bufsize(int32_t tl, int32_t ql);
 
 #ifdef __cplusplus
 }

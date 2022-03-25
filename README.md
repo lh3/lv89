@@ -37,8 +37,8 @@ To alleviate this issue, we employed a divide-and-conquer approach inspired by
 blocks where each block, except the last one, has edit distance exactly *b*.
 We then perform base alignment inside each block. The new algorithm takes
 *O*(*n*(*d*+*b*)) in time and *O*(*d*\*ceil(*d*/*b*)+*b*<sup>2</sup>) in space. When *b*
-equals 1000, the space is reduced by 1000 folds in comparison to the basic
-algorithm.
+equals 1000, the space is reduced by more than two orders of magnitude in
+comparison to the basic algorithm.
 
 ## Brief benchmark
 
@@ -48,7 +48,7 @@ length with an edit distance of 26k. The second pair consists of GRCh38 and
 CHM13 around MHC. They are about 5Mb in length with an edit distance of 123kb.
 These sequences can be found [via Zenodo][seq-zenodo].
 
-|Method|CIGAR|CMD option|Time MHC (s)|RAM MHC (MB)|Time C4 (s)|RAM C4 (kb)|
+|Method|CIGAR|CMD option|Time MHC (s)|RAM MHC (MB)|Time C4 (s)|RAM C4 (kB)|
 |:-----|:---:|:---------|-----------:|-----------:|----------:|---------:|
 |lv89  |N    |          |102         |16          |0.36       |1632|
 |edlib |N    |-e        |36          |25          |0.24       |1848|

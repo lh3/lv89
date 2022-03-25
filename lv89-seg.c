@@ -79,10 +79,10 @@ static int32_t wf_step(int32_t is_ext, int32_t tl, const char *ts, int32_t ql, c
 	b[1].k = (n == 1 || a[0].k > a[1].k? a[0].k : a[1].k) + 1;
 	for (j = 1; j < n - 1; ++j) {
 		int32_t k = a[j-1].k, p = a[j-1].p;
-		p = k > a[j+1].k + 1? p : a[j+1].p;
-		k = k > a[j+1].k + 1? k : a[j+1].k + 1;
 		p = k > a[j].k + 1? p : a[j].p;
 		k = k > a[j].k + 1? k : a[j].k + 1;
+		p = k > a[j+1].k + 1? p : a[j+1].p;
+		k = k > a[j+1].k + 1? k : a[j+1].k + 1;
 		b[j+1].d = a[j].d, b[j+1].k = k, b[j+1].p = p;
 	}
 	if (n >= 2) {
@@ -109,7 +109,7 @@ static uint64_t *wf_traceback(wf_tb_t *tb, int32_t t_end, int32_t q_end, int32_t
 	i = tb->n - 1;
 	while (p >= 0) {
 		wf_diag_t *t = &tb->a[i].a[p];
-		slice[k++] = (uint64_t)t->k<<32 | (t->d + t->k);
+		slice[k++] = (uint64_t)(t->k+1)<<32 | (t->d + t->k + 1);
 		p = t->p, --i;
 	}
 	assert(i == -1);
@@ -147,4 +147,66 @@ uint64_t *lv_ed_segment(int32_t tl, const char *ts, int32_t ql, const char *qs, 
 	free(tb.a);
 	*score = s;
 	return slice;
+}
+
+typedef struct {
+	int32_t m, n;
+	uint32_t *cigar;
+} wf_cigar_t;
+
+static void wf_cigar_push1(wf_cigar_t *c, int32_t op, int32_t len)
+{
+	if (c->n && op == (c->cigar[c->n-1]&0xf)) {
+		c->cigar[c->n-1] += len<<4;
+	} else {
+		if (c->n == c->m) {
+			c->m = c->m + (c->m>>1) + 4;
+			c->cigar = (uint32_t*)realloc(c->cigar, c->m * sizeof(*c->cigar));
+		}
+		c->cigar[c->n++] = len<<4 | op;
+	}
+}
+
+#define kroundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
+
+static void wf_cigar_push(wf_cigar_t *c, int32_t n_cigar, const uint32_t *cigar)
+{
+	if (n_cigar == 0) return;
+	wf_cigar_push1(c, cigar[0]&0xf, cigar[0]>>4);
+	if (c->n + n_cigar - 1 > c->m) {
+		c->m = c->n + n_cigar - 1;
+		kroundup32(c->m);
+		c->cigar = (uint32_t*)realloc(c->cigar, c->m * sizeof(uint32_t));
+	}
+	memcpy(&c->cigar[c->n], &cigar[1], sizeof(uint32_t) * (n_cigar - 1));
+	c->n += n_cigar - 1;
+}
+
+uint32_t *lv_ed_unified_seg(int32_t tl, const char *ts, int32_t ql, const char *qs, int32_t is_ext, int32_t step, int32_t *score, int32_t *t_endl, int32_t *q_endl, int32_t *n_cigar)
+{
+	int32_t i, n_seg, sum_s = 0;
+	uint64_t *seg;
+	wf_cigar_t ci = {0,0,0};
+	seg = lv_ed_segment(tl, ts, ql, qs, is_ext, step, score, &n_seg);
+	for (i = 0; i < n_seg - 1; ++i) {
+		int32_t t_st = seg[i]>>32, t_en = seg[i+1]>>32;
+		int32_t q_st = (int32_t)seg[i], q_en = (int32_t)seg[i+1], s;
+		if (t_st == t_en) {
+			wf_cigar_push1(&ci, 1, q_en - q_st);
+			s = q_en - q_st;
+		} else if (q_st == q_en) {
+			wf_cigar_push1(&ci, 2, t_en - t_st);
+			s = t_en - t_st;
+		} else {
+			uint32_t *cigar;
+			int32_t t_endl, q_endl, n_cigar;
+			cigar = lv_ed_unified(t_en - t_st, &ts[t_st], q_en - q_st, &qs[q_st], 0, &s, &t_endl, &q_endl, &n_cigar);
+			wf_cigar_push(&ci, n_cigar, cigar);
+			free(cigar);
+		}
+		sum_s += s;
+	}
+	assert(sum_s == *score);
+	*n_cigar = ci.n;
+	return ci.cigar;
 }

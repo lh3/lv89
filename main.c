@@ -85,7 +85,10 @@ int main(int argc, char *argv[])
 	} else {
 		fprintf(stderr, "Using lv89...\n");
 		if (report_cigar) {
-			cigar = lv_ed_unified(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, is_ext, &s, &t_endl, &q_endl, &n_cigar);
+			if (step > 0)
+				cigar = lv_ed_unified_seg(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, is_ext, step, &s, &t_endl, &q_endl, &n_cigar);
+			else
+				cigar = lv_ed_unified(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, is_ext, &s, &t_endl, &q_endl, &n_cigar);
 		} else if (step > 0) {
 			seg = lv_ed_segment(ks1->seq.l, ks1->seq.s, ks2->seq.l, ks2->seq.s, is_ext, step, &s, &n_seg);
 			t_endl = seg[n_seg-1]>>32, q_endl = (int32_t)seg[n_seg-1];

@@ -1,3 +1,9 @@
+**This repo has been archived for two reasons. First, the naming of the repo
+"lv89" is inaccurate as Ukkonen first [found][U83] the algorithm implemented
+here (see also #4). Second, the implementation is inefficient. When I have
+time, I may reimplement the algorithm along the direction of
+[miniwfa](https://github.com/lh3/miniwfa).**
+
 ## Getting Started
 
 ```sh
@@ -14,12 +20,6 @@ git clone https://github.com/smarco/WFA2-lib
 (cd WFA2-lib && make)
 make WFA2_ROOT=WFA2-lib
 ```
-
-**This repo has been archived for two reasons. First, the naming of the repo
-"lv89" is inaccurate as Ukkonen first [found][U83] the algorithm implemented
-here (see also #4). Second, the implementation is inefficient. When I have
-time, I may reimplement the algorithm along the direction of
-[miniwfa](https://github.com/lh3/miniwfa).**
 
 ## Introduction
 

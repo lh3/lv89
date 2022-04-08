@@ -1,6 +1,6 @@
 **This repo has been archived for two reasons. First, the naming of the repo
 "lv89" is inaccurate as Ukkonen first [found][U83] the algorithm implemented
-here (see also #4). Second, the implementation is inefficient. When I have
+here (see also [#4](https://github.com/lh3/lv89/issues/4)). Second, the implementation is inefficient. When I have
 time, I may reimplement the algorithm along the direction of
 [miniwfa](https://github.com/lh3/miniwfa).**
 

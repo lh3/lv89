@@ -15,6 +15,12 @@ git clone https://github.com/smarco/WFA2-lib
 make WFA2_ROOT=WFA2-lib
 ```
 
+**This repo has been archived for two reasons. First, the naming of the repo
+"lv89" is inaccurate as Ukkonen first [found][U83] the algorithm implemented
+here (see also #4). Second, the implementation is inefficient. When I have
+time, I may reimplement the algorithm along the direction of
+[miniwfa](https://github.com/lh3/miniwfa).**
+
 ## Introduction
 
 This repo provides a reasonably fast yet lightweight implementation of the
@@ -72,8 +78,8 @@ crucial to many biological applications.
 
 Ukkonen found the first *O*(*nd*) algorithm to compute edit distances. The
 work was established in 1983 and [published in 1985][U83]. Landau and Vishkin
-cited Ukkonen's work but presented it in a different formulation which is
-closer to the modern formulation implemented here. Landau and Vishkin submitted
+cited Ukkonen's work but ~~presented it in a different formulation which is
+closer to the modern formulation implemented here.~~ Landau and Vishkin submitted
 their paper in 1986 and [published in 1989][lv89]. Meanwhile, Myers
 independently published another *O*(*nd*) algorithm [in 1986][myers86].
 His formulation is almost identical to Landau-Vishkin's. Each of the three
